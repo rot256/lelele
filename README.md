@@ -37,6 +37,10 @@ print(row)
 Into a more readable:
 
 ```python3
+from lelele import *
+
+le = LeLeLe()
+
 q = le.var()
 V = [le.short_var() for _ in range(len(ti))] # short variables (sugar for .is_short on a var)
 
@@ -66,6 +70,10 @@ It is recommended to install `fpylll`, such that `LeLeLe` can also be used to so
 Without `fpylll`, `LeLeLe` can still be used to construct the lattices using `.system()` and you can then apply LLL to the resulting lattice using another tool:
 
 ```python3
+from lelele import *
+
+le = LeLeLe()
+
 q = le.var()
 V = [le.short_var() for _ in range(len(ti))] # short variables (sugar for .is_short on a var)
 
