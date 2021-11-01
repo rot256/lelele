@@ -37,7 +37,7 @@ class LeLeLe:
 
     def short_var(self):
         var = self.var()
-        var.is_short()
+        var.short()
         return var
 
     def add_constrain(self, lin):
@@ -55,14 +55,9 @@ class LeLeLe:
 
         M = _zero_matrix(rows, cols)
 
-        print(self.vars)
-
         for (i, con) in enumerate(self.constraints):
             for (scale, var) in con.combine:
                 M[var.index][i] = scale
-
-        for i, row in enumerate(M):
-            print(i, row)
 
         return M
 
@@ -114,13 +109,12 @@ class LeLeLe:
             for con, val in zip(self.constraints, row):
                 con.solutions.append(val)
 
+        return (self.R, self.U, self.M)
+
     def __repr__(self):
         cons = []
         for con in self.constraints:
-            if con.mod:
-                cons.append('    [%s] mod 0x%x' % (con.lin,con.mod))
-            else:
-                cons.append('    [%s]' % con.lin)
+            cons.append('    [%s]' % con)
         return 'LLLSystem(\n' + '\n'.join(cons) + '\n)'
 
 class LinearCombination:
@@ -130,7 +124,7 @@ class LinearCombination:
         self.solutions = None
 
     def __repr__(self):
-        lin = ['0x%x * %r' % (s, v) if s != 1 else '%r' % v for (s, v) in self.combine]
+        lin = ['%s * %r' % (hex(s), v) if s != 1 else '%r' % v for (s, v) in self.combine]
         return ' + '.join(lin)
 
     def __mod__(self, other):
@@ -147,11 +141,14 @@ class LinearCombination:
     def __neg__(self):
         return LinearCombination(
             ctx=self.ctx,
-            combine=[(-s, v) for (s, v) in self.combine)]
+            combine=[(-s, v) for (s, v) in self.combine]
         )
 
     def __sub__(self, other):
         return self + (-other)
+
+    def __rsub__(self, other):
+        return self.__sub__(other)
 
     def __add__(self, other):
         assert self.ctx == other.ctx
@@ -162,10 +159,8 @@ class LinearCombination:
         )
 
     def __radd__(self, other):
-        self.__add__(self, other)
+        return self.__add__(other)
 
-    def __rmul__(self, other):
-        self.__mul__(self, other)
 
     def __mul__(self, other):
         try:
@@ -177,6 +172,9 @@ class LinearCombination:
             ctx=self.ctx,
             combine=[(s * n, v) for (s, v) in self.combine],
         )
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
 
     def short(self):
         '''
@@ -228,7 +226,7 @@ class Variable:
         '''
         Constrain the variable to have small norm.
         '''
-        return _wrap_lin(self).is_short()
+        return _wrap_lin(self).short()
 
     def __getitem__(self, n):
         '''
