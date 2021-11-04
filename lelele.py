@@ -35,11 +35,6 @@ class LeLeLe:
         self.vars.append(var)
         return var
 
-    def short_var(self):
-        var = self.var()
-        var.short()
-        return var
-
     def add_constrain(self, lin):
         self.constraints.append(lin)
 
@@ -77,7 +72,7 @@ class LeLeLe:
         # reduced basis (used to derieve assignment of constrains)
         R = IntegerMatrix.from_matrix(M)
 
-        # run LLL and shave the result (for debugging)
+        # run LLL and save the result (for debugging)
         LLL.reduction(R, U)
 
         self.U = U
@@ -151,8 +146,9 @@ class LinearCombination:
         return self.__sub__(other)
 
     def __add__(self, other):
-        assert self.ctx == other.ctx
-        assert isinstance(other, LinearCombination)
+        if other == 0: return self # this is convenient
+        assert isinstance(other, LinearCombination), 'can only add linear combination to linear combination, not %s' % type(other)
+        assert self.ctx == other.ctx, 'linear combinations belong to different systems'
         return LinearCombination(
             ctx=self.ctx,
             combine=self.combine + other.combine,
@@ -160,7 +156,6 @@ class LinearCombination:
 
     def __radd__(self, other):
         return self.__add__(other)
-
 
     def __mul__(self, other):
         try:
@@ -180,7 +175,8 @@ class LinearCombination:
         '''
         Constrain the linear combination to have small norm.
         '''
-        return self.ctx.add_constrain(self)
+        self.ctx.add_constrain(self)
+        return self
 
     def __getitem__(self, n):
         '''
@@ -211,13 +207,13 @@ class Variable:
         return _wrap_lin(self) + _wrap_lin(other)
 
     def __radd__(self, other):
-        return _wrap_lin(self) + _wrap_lin(other)
+        return self.__add__(other)
 
     def __mul__(self, other):
-        return _wrap_lin(self) * other
+        return _wrap_lin(self) * _wrap_lin(other)
 
     def __rmul__(self, other):
-        return _wrap_lin(self) * other
+        return self.__mul__(other)
 
     def __repr__(self):
         return self.name
@@ -226,7 +222,8 @@ class Variable:
         '''
         Constrain the variable to have small norm.
         '''
-        return _wrap_lin(self).short()
+        _wrap_lin(self).short()
+        return self
 
     def __getitem__(self, n):
         '''

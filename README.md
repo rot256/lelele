@@ -42,7 +42,7 @@ from lelele import *
 le = LeLeLe()
 
 q = le.var()
-V = [le.short_var() for _ in range(len(ti))] # short variables (sugar for .is_short on a var)
+V = [le.var().short() for _ in range(len(ti))] # short variables
 
 # define short linear combination mod n
 w = sum([t*v for (v, t) in zip(V, ti)]) + inv * u * q
@@ -75,7 +75,7 @@ from lelele import *
 le = LeLeLe()
 
 q = le.var()
-V = [le.short_var() for _ in range(len(ti))] # short variables (sugar for .is_short on a var)
+V = [le.var().short() for _ in range(len(ti))] # short variables
 
 # define short linear combination mod n
 w = sum([t*v for (v, t) in zip(V, ti)]) + inv * u * q

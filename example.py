@@ -15,7 +15,11 @@ ti = [4294967296, 18446744073709551616, 79228162514264337593543950336, 340282366
 le = LeLeLe()
 
 q = le.var()
-V = [le.short_var() for _ in range(len(ti))]
+V = [le.var().short() for _ in range(len(ti))]
+
+print(type(V[0]))
+
+ti[0] * V[0] + ti[1] * V[1]
 
 # define short linear combination mod n
 w = sum([t*v for (v, t) in zip(V, ti)])
