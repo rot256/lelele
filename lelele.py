@@ -27,10 +27,13 @@ class LeLeLe:
         self.vars = []
         self.constraints = []
 
-    def var(self):
+    def var(self, name=None):
         var = Variable()
         var.ctx = self
-        var.name = 'v%d' % len(self.vars)
+        if name is not None:
+            var.name = name
+        else:
+            var.name = 'v%d' % len(self.vars)
         var.index = len(self.vars)
         self.vars.append(var)
         return var
@@ -118,6 +121,15 @@ class LinearCombination:
         self.combine = combine # linear combination
         self.solutions = None
 
+    def __eq__(self, other):
+        if not isinstance(other, LinearCombination):
+            return False
+        if self.ctx != other.ctx:
+            return False
+        if self.combine != other.combine:
+            return False
+        return True
+
     def __repr__(self):
         lin = ['%s * %r' % (hex(s), v) if s != 1 else '%r' % v for (s, v) in self.combine]
         return ' + '.join(lin)
@@ -199,6 +211,9 @@ class Variable:
 
     def __sub__(self, other):
         return _wrap_lin(self) - _wrap_lin(other)
+
+    def __neg__(self):
+        return - _wrap_lin(self)
 
     def __rsub__(self, other):
         return _wrap_lin(self) - _wrap_lin(other)

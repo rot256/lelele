@@ -62,6 +62,13 @@ le.solve()
 print(-int(w), [int(v) for v in V])
 ```
 
+## Installation
+
+Rather than installing the library using `pip`,
+`LeLeLe` is simply intended to be copy-pasted to the same folder as your exploit.
+This is because I do not want to commit to a stable API, so if your exploits should keep working
+please copy-paste whenever you need it (essentially vendoring it).
+
 ## Requirements
 
 It is recommended to install `fpylll`, such that `LeLeLe` can also be used to solve the system and automatically assign the solution to all the free variables.

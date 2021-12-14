@@ -17,8 +17,6 @@ le = LeLeLe()
 q = le.var()
 V = [le.var().short() for _ in range(len(ti))]
 
-print(type(V[0]))
-
 ti[0] * V[0] + ti[1] * V[1]
 
 # define short linear combination mod n
@@ -29,6 +27,9 @@ w.short()
 
 # q should be taken at most once: require that q * <<large number>> is small
 (q * 0x100).short()
+
+# print a description of the constraint system
+print(le)
 
 # find a solution
 le.solve()
