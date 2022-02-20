@@ -159,11 +159,26 @@ class LinearCombination:
 
     def __add__(self, other):
         if other == 0: return self # this is convenient
-        assert isinstance(other, LinearCombination), 'can only add linear combination to linear combination, not %s' % type(other)
+        assert isinstance(other, LinearCombination) or isinstance(other, Variable), 'can only add linear combination to linear combination, not %s' % type(other)
         assert self.ctx == other.ctx, 'linear combinations belong to different systems'
+
+        # combine terms
+        # i.e. [(s1, var)] + [(s2, var)] would become [(s1 + s2, var)]
+
+        lin1 = self.combine
+        lin2 = _wrap_lin(other).combine
+
+        le_vars = {v: s for (s, v) in lin1}
+
+        for (s, v) in lin2:
+            try:
+                le_vars[v] += s
+            except KeyError:
+                le_vars[v] = s
+
         return LinearCombination(
             ctx=self.ctx,
-            combine=self.combine + other.combine,
+            combine= [(s,v) for (v,s) in le_vars.items()]
         )
 
     def __radd__(self, other):
@@ -205,6 +220,9 @@ class LinearCombination:
     def __int__(self):
         return self[0]
 
+    def __index__(self):
+        return int(self)
+
 class Variable:
     def __init__(self):
         self.solutions = None # not solved
@@ -232,6 +250,12 @@ class Variable:
 
     def __repr__(self):
         return self.name
+
+    def __index__(self):
+        return int(self)
+
+    def __mod__(self, other):
+        return _wrap_lin(self) % other
 
     def short(self):
         '''

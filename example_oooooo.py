@@ -23,31 +23,28 @@ from lelele import *
 
 LEN = 128
 
-l = LeLeLe()
+le = LeLeLe()
 
-v1 = ord('O')
-v2 = ord('o')
+v1 = ord('o')
+v0 = ord('O')
 
-D = v1 ^ v2
-C = v1 & v2
+D = v1 - v0
 
-com = bytes([C] * LEN)
-com_M = bytes_to_long(com)
+b = [le.var().short() for _ in range(LEN)]
 
-b = [l.var().short() for _ in range(LEN)]
+v0s = bytes_to_long(bytes([v0] * LEN))
+con = v0s - S # the constant
 
-cons = com_M - S
-
-con_var = l.var().short()
+C = le.var().short()
 
 d = sum([b[i] * 2**(i * 8) for i in range(LEN)]) * D
-v = (d + con_var * cons) % M
+v = (C * con + d) % M
 
 v.short()
 
-l.solve()
+le.solve()
 
-s = [chr(C + D) if int(bi) else chr(C) for bi in b][::-1]
+s = [chr(v1) if int(bi) else chr(v0) for bi in b][::-1]
 
 s = ''.join(s)
 
