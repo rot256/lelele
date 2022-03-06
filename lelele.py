@@ -218,7 +218,7 @@ class LinearCombination:
         return sum([s * v[n] for (s, v) in self.combine])
 
     def __int__(self):
-        return self[0]
+        return int(self[0])
 
     def __index__(self):
         return int(self)
@@ -273,4 +273,4 @@ class Variable:
         return self.solutions[n]
 
     def __int__(self):
-        return self[0]
+        return int(self[0])
