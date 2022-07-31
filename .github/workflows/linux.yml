@@ -23,10 +23,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update -y
-        sudo apt install -y libgmp-dev libmpfr-dev autotools-dev build-essential
+        sudo apt install -y python3-fpylll
         python -m pip install --upgrade pip
-        pip install --upgrade cython
-        pip install --upgrade fpylll
 
     - name: Run tests
       run: ./tests.sh
