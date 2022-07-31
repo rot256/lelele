@@ -10,7 +10,7 @@ jobs:
 
     strategy:
         matrix:
-          python-version: ["3.7", "3.8", "3.9", "3.10"]
+          python-version: ["3.10"]
 
     steps:
     - uses: actions/checkout@v3
@@ -22,8 +22,11 @@ jobs:
 
     - name: Install dependencies
       run: |
+        sudo apt update -y
+        sudo apt install -y libgmp-dev libmpfr-dev autotools-dev build-essential
         python -m pip install --upgrade pip
-        pip install fpylll
+        pip install --upgrade cython
+        pip install --upgrade fpylll
 
     - name: Run tests
       run: ./tests.sh
