@@ -41,18 +41,13 @@ from lelele import *
 
 le = LeLeLe()
 
-q = le.var()
-V = [le.var().short() for _ in range(len(ti))] # short variables
+V  = [le.byte() for _ in range(len(ti))] # variable bytes
 
 # define short linear combination mod n
-w = sum([t*v for (v, t) in zip(V, ti)]) + inv * u * q
-w %= n
-w.short()
+w = sum([t*v for (v, t) in zip(V, ti)]) + inv * u
+(w % n).short()
 
-# q should be taken at most once: require that q * <<large number>> is small
-(q * 0x100).short()
-
-# prints a description of the system
+# prints a description of the system for debugging
 print(le)
 
 # find a solution
@@ -81,17 +76,15 @@ from lelele import *
 
 le = LeLeLe()
 
-q = le.var()
-V = [le.var().short() for _ in range(len(ti))] # short variables
+V  = [le.byte() for _ in range(len(ti))] # variable bytes
 
 # define short linear combination mod n
-w = sum([t*v for (v, t) in zip(V, ti)]) + inv * u * q
-w %= n
-w.short()
+w = sum([t*v for (v, t) in zip(V, ti)]) + inv * u
+(w % n).short()
 
-# q should be taken at most once: require that q * <<large number>> is small
-(q * 0x100).short()
+# prints a description of the system for debugging
+print(le)
 
-# export lattice, a list of lists of ints: [[int]]
+# generate the basis (for LLL reduction)
 M = le.system()
 ```
