@@ -1,0 +1,26 @@
+name: Tests
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Instal fpylll
+      run: |
+        sudo apt -y update
+        sudo apt -y install python3-fpylll python3-pip
+
+    - name: Instal other test dependencies
+      run: |
+        pip install pycryptodome
+
+    - name: Run tests
+      run: ./tests.sh
