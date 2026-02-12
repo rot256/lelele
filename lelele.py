@@ -3,8 +3,8 @@ BACKEND_FPYLLL: str = 'fpylll'
 BACKEND_DEFAULT: str = BACKEND_FPYLLL
 
 from math import gcd
-from hashlib import sha256
 from typing import Iterator, Generator
+from functools import reduce, total_ordering
 
 def _wrap_lin(ctx: 'LeLeLe', val: 'LinearCombination | Variable | int') -> 'LinearCombination':
     assert isinstance(ctx, LeLeLe)
@@ -24,28 +24,10 @@ def _wrap_lin(ctx: 'LeLeLe', val: 'LinearCombination | Variable | int') -> 'Line
         raise ValueError('failed to covert %r to linear combination' % val)
 
 def _zero_matrix(n: int, m: int) -> list[list[int]]:
-    M = []
-    for _ in range(n):
-        M.append([0] * m)
-    return M
-
-def _identity(n: int) -> list[list[int]]:
-    '''
-    Returns an identity matrix of size n x n
-    '''
-    M = _zero_matrix(n, n)
-    for i in range(n):
-        M[i][i] = 1
-    return M
-
-def _concat(A: list[list[int]], B: list[list[int]]) -> list[list[int]]:
-    assert len(A) == len(B), 'Matrices must have the same number of rows'
-    return [A[i] + B[i] for i in range(len(A))]
+    return [[0] * m for _ in range(n)]
 
 def _reduce_row_gcd(row: list[int]) -> None:
-    g = 0
-    for v in row:
-        g = gcd(g, abs(v))
+    g = reduce(gcd, row, 0)
     if g > 1:
         for i in range(len(row)):
             row[i] //= g
@@ -58,7 +40,7 @@ class LeLeLe:
 
     def one(self) -> 'Variable':
         '''
-        Returns a "variable" which should the constant value one.
+        Returns a "variable" which should be the constant value one.
         '''
         if self.vone is None:
             self.vone = self.bit(name='1')
@@ -95,7 +77,7 @@ class LeLeLe:
         This does not require fpylll.
         '''
 
-        # calculathe largest norm
+        # calculate the largest norm
         max_norm = max([norm for _, norm in self.constraints], default=1)
 
         rows = len(self.vars)
@@ -103,9 +85,9 @@ class LeLeLe:
 
         M = _zero_matrix(rows, cols)
 
-        for (i, (lin, norm)) in enumerate(self.constraints):
-            rescale = max_norm // norm # rescale factor
-            for (var, scl) in lin.combine.items():
+        for i, (lin, norm) in enumerate(self.constraints):
+            rescale = max_norm // norm
+            for var, scl in lin.combine.items():
                 M[var.index][i] = scl * rescale
 
         return M
@@ -138,7 +120,7 @@ class LeLeLe:
             solver_args = {}
 
         # reduce the matrix with the chosen backend
-        if backend == 'fpylll':
+        if backend == BACKEND_FPYLLL:
             from fpylll import IntegerMatrix, LLL
             R = IntegerMatrix.from_matrix(M)
             LLL.reduction(R, **solver_args)
@@ -386,11 +368,7 @@ class LinearCombination:
         assert isinstance(combine, dict), f"combine must be a dictionary, got {type(combine)}"
         self.ctx = ctx
         self.combine = combine
-        self.solutions: list[int] | None = None
-
-        # allows quick comparison:
-        # without O(n) complexity for every equality check
-        self.identifier = sha256(str(self).encode()).hexdigest()
+        self._key = frozenset(combine.items())
 
     def vars(self) -> set['Variable']:
         return set(self.combine.keys())
@@ -405,19 +383,14 @@ class LinearCombination:
         return iter(sorted(self.combine.items()))
 
     def __eq__(self, other: object) -> bool:
-        # check the type
         if not isinstance(other, LinearCombination):
             return False
-
-        # check the context
-        if self.ctx != other.ctx:
+        if self.ctx is not other.ctx:
             return False
-
-        # check the linear combination
-        return self.identifier == other.identifier
+        return self._key == other._key
 
     def __hash__(self) -> int:
-        return hash((id(self.ctx), self.identifier))
+        return hash((id(self.ctx), self._key))
 
     def __repr__(self) -> str:
         lin = ['%r * %s' % (v, hex(s)) if s != 1 else '%r' % v for (v, s) in self]
@@ -489,30 +462,12 @@ class LinearCombination:
         self.ctx.add_constraint(self, norm)
         return self
 
-    def __getitem__(self, n: int) -> int:
-        '''
-        Return the n'th solution
-        '''
-
-        # check if constraint and solution set
-        if self.solutions is not None:
-            return self.solutions[n]
-
-        # otherwise compute from variable assignments
-        return sum([s * v[n] for (v, s) in self.combine.items()])
-
-    def __int__(self) -> int:
-        return int(self[0])
-
-    def __index__(self) -> int:
-        return int(self)
-
+@total_ordering
 class Variable:
     def __init__(self, ctx: 'LeLeLe', name: str, index: int):
         self.ctx = ctx
         self.name = name
         self.index = index
-        self.solutions: list[int] | None = None # not solved
 
     def lin(self) -> LinearCombination:
         return LinearCombination(ctx=self.ctx, combine={self: 1})
@@ -527,21 +482,6 @@ class Variable:
         if not isinstance(other, Variable):
             return NotImplemented
         return self.key() < other.key()
-
-    def __le__(self, other: 'Variable') -> bool:
-        if not isinstance(other, Variable):
-            return NotImplemented
-        return self.key() <= other.key()
-
-    def __gt__(self, other: 'Variable') -> bool:
-        if not isinstance(other, Variable):
-            return NotImplemented
-        return self.key() > other.key()
-
-    def __ge__(self, other: 'Variable') -> bool:
-        if not isinstance(other, Variable):
-            return NotImplemented
-        return self.key() >= other.key()
 
     def __neg__(self) -> LinearCombination:
         return - self.lin()
@@ -566,9 +506,6 @@ class Variable:
 
     def __repr__(self) -> str:
         return self.name
-
-    def __index__(self) -> int:
-        return int(self)
 
     def __mod__(self, other) -> LinearCombination:
         return self.lin() % int(other)
