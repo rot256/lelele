@@ -183,7 +183,7 @@ class Solution:
         self.assign_rels = assign_rels
 
     def __str__(self) -> str:
-        longest_var = max(len(str(var)) for var in self.assign_vars)
+        longest_var = max((len(str(var)) for var in self.assign_vars), default=0)
         lines = []
         lines.append("Solution(")
         for var, value in self.assign_vars.items():
