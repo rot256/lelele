@@ -348,17 +348,22 @@ class Solutions:
 
             yield Solution(assign_vars, assign_rels)
 
+    def _get_first(self) -> 'Solution':
+        '''Returns the first non-degenerate solution, caching it.'''
+        if self._first is None:
+            try:
+                self._first = next(iter(self))
+            except StopIteration:
+                raise ValueError('No non-degenerate solution found')
+        return self._first
+
     def __call__(self, obj: 'Variable | LinearCombination') -> int:
         '''Convenience: delegates to the first non-degenerate solution.'''
-        if self._first is None:
-            self._first = next(iter(self))
-        return self._first(obj)
+        return self._get_first()(obj)
 
     def __str__(self) -> str:
         '''Convenience: delegates to the first non-degenerate solution.'''
-        if self._first is None:
-            self._first = next(iter(self))
-        return str(self._first)
+        return str(self._get_first())
 
 class LinearCombination:
     '''
