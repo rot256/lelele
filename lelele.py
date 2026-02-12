@@ -442,7 +442,7 @@ class LinearCombination:
         return self + (-other)
 
     def __rsub__(self, other) -> 'LinearCombination':
-        return self.__sub__(other)
+        return _wrap_lin(self.ctx, other) - self
 
     def __add__(self, other) -> 'LinearCombination':
         if other == 0: return self # this is convenient
@@ -550,7 +550,7 @@ class Variable:
         return self.lin() - _wrap_lin(self.ctx, other)
 
     def __rsub__(self, other) -> LinearCombination:
-        return self.lin() - _wrap_lin(self.ctx, other)
+        return _wrap_lin(self.ctx, other) - self.lin()
 
     def __add__(self, other) -> LinearCombination:
         return self.lin() + _wrap_lin(self.ctx, other)
