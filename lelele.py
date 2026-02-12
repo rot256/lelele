@@ -151,12 +151,12 @@ class LeLeLe:
         else:
             raise ValueError('Invalid backend')
 
-    def solve(self, backend: str | None = None, solver_args: dict | None = None) -> 'Solution':
+    def solve(self, backend: str | None = None, solver_args: dict | None = None) -> 'Solutions':
         '''
-        Solves the system and assigns solution values to all variables.
+        Solves the system and returns an iterable of solutions.
 
-        This method solves the linear system using matrix reduction and assigns
-        the resulting values to each variable in the system.
+        This method solves the linear system using matrix reduction and returns
+        a Solutions object that iterates over non-degenerate variable assignments.
 
         Args:
             backend (str, optional): The backend solver to use ('fpylll' or 'flatn').
@@ -164,13 +164,14 @@ class LeLeLe:
             solver_args (dict, optional): Additional arguments to pass to the solver backend.
 
         Returns:
-            Solution: A Solution object containing the variable assignments and reduced matrix.
+            Solutions: An iterable of Solution snapshots. Supports direct calls
+                via sol(var) which delegates to the first non-degenerate solution.
 
         Raises:
             ImportError: If neither fpylll nor flatn solver backend is installed.
             ValueError: If an invalid backend is specified.
         '''
-        return Solution(
+        return Solutions(
             self.solve_raw(
                 backend=backend,
                 solver_args=solver_args
@@ -188,32 +189,16 @@ class LeLeLe:
         return 'LeLeLe(\n' + '\n'.join(cons) + '\n)'
 
 class Solution:
+    '''
+    Immutable snapshot of a single solution's variable assignments.
+    '''
     def __init__(
         self,
-        R: list[list[int]],
-        vone: 'Variable | None',
-        vars: list['Variable'],
-        cons: list[tuple['LinearCombination', int]],
-        M: list[list[int]],
+        assign_vars: dict['Variable', int],
+        assign_rels: dict['LinearCombination', int],
     ):
-        self.R = [list(row) for row in R]
-        self.vone = vone
-        self.vars = list(vars)
-        self.cons = list(cons)
-        self.rels = [rel for (rel, _norm) in cons]
-        self.M = M
-
-        assert len(self.R) == len(self.vars)
-        assert len(self.R[0]) == len(self.rels)
-
-        # extract solution from matrix
-        self.all_sols = self.solve()
-        self.assign_vars: dict['Variable', int] = {}
-        self.assign_rels: dict['LinearCombination', int] = {}
-        self.next_solution()
-
-    def reduced(self) -> list[list[int]]:
-        return self.R
+        self.assign_vars = assign_vars
+        self.assign_rels = assign_rels
 
     def __str__(self) -> str:
         longest_var = max(len(str(var)) for var in self.assign_vars)
@@ -247,10 +232,33 @@ class Solution:
 
         raise TypeError('Expected Variable or LinearCombination')
 
-    def next_solution(self) -> None:
-        assign_vars, assign_rels = next(self.all_sols)
-        self.assign_vars = assign_vars
-        self.assign_rels = assign_rels
+
+class Solutions:
+    '''
+    Iterable over solutions from lattice reduction. Skips degenerate rows.
+    '''
+    def __init__(
+        self,
+        R: list[list[int]],
+        vone: 'Variable | None',
+        vars: list['Variable'],
+        cons: list[tuple['LinearCombination', int]],
+        M: list[list[int]],
+    ):
+        self.R = [list(row) for row in R]
+        self.vone = vone
+        self.vars = list(vars)
+        self.cons = list(cons)
+        self.rels = [rel for (rel, _norm) in cons]
+        self.M = M
+        self._first: Solution | None = None
+
+        assert len(self.R) == len(self.vars)
+        assert len(self.R[0]) == len(self.rels)
+
+    def reduced(self) -> list[list[int]]:
+        '''Returns the raw reduced matrix.'''
+        return self.R
 
     @staticmethod
     def _solve_row(M: list[list[int]], sol: list[int], num_vars: int, num_cons: int):
@@ -260,8 +268,7 @@ class Solution:
         M is num_vars x num_cons, so M^T is num_cons x num_vars.
         We build the augmented matrix [M^T | sol] and reduce.
 
-        Returns (assign_vars_list, assign_rels_list) mapping
-        variable-index -> value and constraint-index -> value,
+        Returns a list mapping variable-index -> value,
         or None if the row is inconsistent / doesn't determine all variables.
         '''
 
@@ -327,7 +334,7 @@ class Solution:
 
         return result
 
-    def solve(self) -> Generator[tuple[dict['Variable', int], dict['LinearCombination', int]], None, None]:
+    def __iter__(self) -> Generator[Solution, None, None]:
         num_vars = len(self.vars)
         num_cons = len(self.rels)
 
@@ -343,11 +350,27 @@ class Solution:
                 # could not determine all variables from this row
                 continue
 
+            # skip degenerate: vone=0 means all constants vanish
+            if self.vone is not None and result[self.vone.index] == 0:
+                continue
+
             assign_vars: dict['Variable', int] = {}
             for var, val in zip(self.vars, result):
                 assign_vars[var] = val
 
-            yield (assign_vars, assign_rels)
+            yield Solution(assign_vars, assign_rels)
+
+    def __call__(self, obj: 'Variable | LinearCombination') -> int:
+        '''Convenience: delegates to the first non-degenerate solution.'''
+        if self._first is None:
+            self._first = next(iter(self))
+        return self._first(obj)
+
+    def __str__(self) -> str:
+        '''Convenience: delegates to the first non-degenerate solution.'''
+        if self._first is None:
+            self._first = next(iter(self))
+        return str(self._first)
 
 class LinearCombination:
     '''

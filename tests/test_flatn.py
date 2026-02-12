@@ -149,7 +149,7 @@ class TestOoooooFlatn(unittest.TestCase):
             (d % M).short()
 
             try:
-                sol = m.solve(backend=BACKEND_FLATN)
+                solutions = m.solve(backend=BACKEND_FLATN)
             except (ValueError, RuntimeError):
                 # RuntimeError: flatter may crash on certain lattices
                 continue
@@ -157,8 +157,7 @@ class TestOoooooFlatn(unittest.TestCase):
             # flatn may place the correct solution deeper in the reduced
             # matrix than fpylll does, so iterate through all rows.
             msg = message.decode('utf-8')
-            num_rows = len(m.vars)
-            for _ in range(num_rows):
+            for sol in solutions:
                 vals = set(sol(bi) for bi in b)
                 if vals <= {0, 1}:
                     s = [chr(v1) if sol(bi) else chr(v0) for bi in b][::-1]
@@ -168,11 +167,6 @@ class TestOoooooFlatn(unittest.TestCase):
                     s = [chr(v1) if sol(bi) else chr(v0) for bi in b][::-1]
                     if ''.join(s) == msg:
                         return
-
-                try:
-                    sol.next_solution()
-                except StopIteration:
-                    break
 
             self.assertGreater(fails, 0, 'too many failed attempts')
             fails -= 1
