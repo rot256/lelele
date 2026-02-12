@@ -341,7 +341,6 @@ class Solution:
             result = self._solve_row(self.M, sol, num_vars, num_cons)
             if result is None:
                 # could not determine all variables from this row
-                yield ({}, assign_rels)
                 continue
 
             assign_vars: dict['Variable', int] = {}
