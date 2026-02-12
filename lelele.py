@@ -21,7 +21,7 @@ def _wrap_lin(ctx: 'LeLeLe', val: 'LinearCombination | Variable | int') -> 'Line
     try:
         return LinearCombination(ctx=ctx, combine={ctx.one(): int(val)})
     except ValueError:
-        raise ValueError('failed to covert %r to linear combination' % val)
+        raise ValueError(f'failed to convert {val!r} to linear combination')
 
 def _zero_matrix(n: int, m: int) -> list[list[int]]:
     return [[0] * m for _ in range(n)]
