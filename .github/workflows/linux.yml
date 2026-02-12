@@ -1,8 +1,6 @@
 name: Tests
 
 on:
-  schedule:
-    - cron: '0 0 * * 0'
   push:
   pull_request:
 
@@ -11,16 +9,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - name: Instal fpylll
-      run: |
-        sudo apt -y update
-        sudo apt -y install python3-fpylll python3-pip
-
-    - name: Instal other test dependencies
-      run: |
-        pip install pycryptodome
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
 
     - name: Run tests
-      run: ./tests.sh
+      run: uv run --project tests python -m unittest discover -s tests -v
