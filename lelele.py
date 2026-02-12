@@ -2,6 +2,7 @@ BACKEND_FLATN: str = 'flatn'
 BACKEND_FPYLLL: str = 'fpylll'
 BACKEND_DEFAULT: str = BACKEND_FPYLLL
 
+from math import gcd
 from hashlib import sha256
 from typing import Iterator, Generator
 
@@ -40,6 +41,14 @@ def _identity(n: int) -> list[list[int]]:
 def _concat(A: list[list[int]], B: list[list[int]]) -> list[list[int]]:
     assert len(A) == len(B), 'Matrices must have the same number of rows'
     return [A[i] + B[i] for i in range(len(A))]
+
+def _reduce_row_gcd(row: list[int]) -> None:
+    g = 0
+    for v in row:
+        g = gcd(g, abs(v))
+    if g > 1:
+        for i in range(len(row)):
+            row[i] //= g
 
 class LeLeLe:
     def __init__(self):
@@ -168,7 +177,8 @@ class LeLeLe:
             ),
             self.vone,
             self.vars,
-            self.constraints
+            self.constraints,
+            self.system(),
         )
 
     def __repr__(self) -> str:
@@ -184,12 +194,14 @@ class Solution:
         vone: 'Variable | None',
         vars: list['Variable'],
         cons: list[tuple['LinearCombination', int]],
+        M: list[list[int]],
     ):
         self.R = [list(row) for row in R]
         self.vone = vone
         self.vars = list(vars)
         self.cons = list(cons)
         self.rels = [rel for (rel, _norm) in cons]
+        self.M = M
 
         assert len(self.R) == len(self.vars)
         assert len(self.R[0]) == len(self.rels)
@@ -240,66 +252,101 @@ class Solution:
         self.assign_vars = assign_vars
         self.assign_rels = assign_rels
 
-    def solve(self) -> Generator[tuple[dict['Variable', int], dict['LinearCombination', int]], None, None]:
-        for sol in self.R:
-            # map: var -> int (assignment)
-            assign_rels: dict['LinearCombination', int] = {}
-            assign_vars: dict['Variable', int] = {}
+    @staticmethod
+    def _solve_row(M: list[list[int]], sol: list[int], num_vars: int, num_cons: int):
+        '''
+        Solve M^T * x = sol for x using Gauss-Jordan elimination over Z.
 
+        M is num_vars x num_cons, so M^T is num_cons x num_vars.
+        We build the augmented matrix [M^T | sol] and reduce.
+
+        Returns (assign_vars_list, assign_rels_list) mapping
+        variable-index -> value and constraint-index -> value,
+        or None if the row is inconsistent / doesn't determine all variables.
+        '''
+
+        # build augmented matrix [M^T | sol]
+        nrows = num_cons
+        ncols = num_vars + 1  # +1 for augmented column
+        A = []
+        for c in range(num_cons):
+            row = [M[v][c] for v in range(num_vars)]
+            row.append(sol[c])
+            A.append(row)
+
+        # Gauss-Jordan elimination over Z
+        pivot_row = [None] * num_vars  # maps column -> row with pivot
+        pr = 0  # next pivot row
+        for col in range(num_vars):
+            # find row with smallest nonzero absolute value in this column (from pr onward)
+            best = None
+            for r in range(pr, nrows):
+                if A[r][col] != 0:
+                    av = abs(A[r][col])
+                    if best is None or av < best[0]:
+                        best = (av, r)
+            if best is None:
+                continue  # no pivot in this column
+
+            _, br = best
+            # swap to pivot position
+            A[pr], A[br] = A[br], A[pr]
+
+            # make pivot positive
+            if A[pr][col] < 0:
+                for j in range(ncols):
+                    A[pr][j] = -A[pr][j]
+
+            # eliminate all other rows (both above and below)
+            for r in range(nrows):
+                if r == pr or A[r][col] == 0:
+                    continue
+                # eliminate: row[r] = row[r] * pivot - row[pr] * A[r][col]
+                factor = A[r][col]
+                pivot_val = A[pr][col]
+                for j in range(ncols):
+                    A[r][j] = A[r][j] * pivot_val - A[pr][j] * factor
+                _reduce_row_gcd(A[r])
+
+            pivot_row[col] = pr
+            pr += 1
+
+        # extract variable values
+        result = [None] * num_vars
+        for col in range(num_vars):
+            r = pivot_row[col]
+            if r is None:
+                return None  # underdetermined
+            pv = A[r][col]
+            rhs = A[r][num_vars]
+            if pv == 0:
+                return None
+            if rhs % pv != 0:
+                return None  # not an integer solution
+            result[col] = rhs // pv
+
+        return result
+
+    def solve(self) -> Generator[tuple[dict['Variable', int], dict['LinearCombination', int]], None, None]:
+        num_vars = len(self.vars)
+        num_cons = len(self.rels)
+
+        for sol in self.R:
             # assign linear combinations
+            assign_rels: dict['LinearCombination', int] = {}
             for (rel, val) in zip(self.rels, sol):
                 assign_rels[rel] = val
 
-            # use a basic peeling algorithm to recover variables:
-            # map: linear relation -> unknown terms
-            unknown = {rel: len(rel) for rel in self.rels}
+            # solve M^T * x = sol via Gaussian elimination
+            result = self._solve_row(self.M, sol, num_vars, num_cons)
+            if result is None:
+                # could not determine all variables from this row
+                yield ({}, assign_rels)
+                continue
 
-            # map: linear relation -> value of linear combine of unknown terms
-            values = {rel: val for rel, val in zip(self.rels, sol)}
-
-            # map: var -> LinearCombination's with var in it
-            appear = {var: [] for var in self.vars}
-            for rel in self.rels:
-                for var in rel.vars():
-                    appear[var].append(rel)
-
-            while True:
-                # find singleton
-                for (rel, n) in unknown.items():
-                    if n == 1: break
-                else:
-                    break
-
-                # find the single unknown variable
-                val = values[rel]
-                for (var, scl) in rel:
-                    if var not in assign_vars:
-                        break
-                else:
-                    assert False, "unreachable"
-
-                # var * scl = val
-                print(rel)
-                print(val)
-                print(scl)
-                assert val % scl == 0
-                assigned = val // scl
-
-                # remove from other combinations
-                if var in assign_vars:
-                    assert assign_vars[var] == assigned
-                    continue
-
-                for orel in appear[var]:
-                    values[orel] -= assigned * orel.coeff(var)
-                    assert unknown[orel] > 0
-                    unknown[orel] -= 1
-
-                # removed from every relation
-                appear[var] = []
-
-                # add to assignments
-                assign_vars[var] = assigned
+            assign_vars: dict['Variable', int] = {}
+            for var, val in zip(self.vars, result):
+                assign_vars[var] = val
 
             yield (assign_vars, assign_rels)
 
