@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 BACKEND_FLATN: str = 'flatn'
 BACKEND_FPYLLL: str = 'fpylll'
 BACKEND_DEFAULT: str = BACKEND_FPYLLL
@@ -6,7 +8,7 @@ from math import gcd
 from typing import Iterator, Generator
 from functools import reduce, total_ordering
 
-def _wrap_lin(ctx: 'LeLeLe', val: 'LinearCombination | Variable | int') -> 'LinearCombination':
+def _wrap_lin(ctx: LeLeLe, val: LinearCombination | Variable | int) -> LinearCombination:
     assert isinstance(ctx, LeLeLe)
 
     # linear combination
@@ -34,11 +36,11 @@ def _reduce_row_gcd(row: list[int]) -> None:
 
 class LeLeLe:
     def __init__(self):
-        self.vars: list['Variable'] = []
-        self.vone: 'Variable | None' = None
-        self.constraints: list[tuple['LinearCombination', int]] = []
+        self.vars: list[Variable] = []
+        self.vone: Variable | None = None
+        self.constraints: list[tuple[LinearCombination, int]] = []
 
-    def one(self) -> 'Variable':
+    def one(self) -> Variable:
         '''
         Returns a "variable" which should be the constant value one.
         '''
@@ -46,17 +48,17 @@ class LeLeLe:
             self.vone = self.bit(name='1')
         return self.vone
 
-    def bit(self, name: str | None = None) -> 'Variable':
+    def bit(self, name: str | None = None) -> Variable:
         return self.var(name, 'bit').short(norm=1)
 
-    def byte(self, name: str | None = None) -> 'Variable':
+    def byte(self, name: str | None = None) -> Variable:
         return self.var(name, 'byte').short(norm=0xff)
 
-    def word(self, width: int, name: str | None = None) -> 'Variable':
+    def word(self, width: int, name: str | None = None) -> Variable:
         assert width > 0
         return self.var(name, 'word').short(norm=(1 << width)-1)
 
-    def var(self, name: str | None = None, prefix: str = 'var') -> 'Variable':
+    def var(self, name: str | None = None, prefix: str = 'var') -> Variable:
         idx = len(self.vars)
         var = Variable(
             self,
@@ -66,7 +68,7 @@ class LeLeLe:
         self.vars.append(var)
         return var
 
-    def add_constraint(self, lin: 'LinearCombination', norm: int) -> None:
+    def add_constraint(self, lin: LinearCombination, norm: int) -> None:
         assert isinstance(lin, LinearCombination)
         self.constraints.append((lin, int(norm)))
 
@@ -133,7 +135,7 @@ class LeLeLe:
         else:
             raise ValueError('Invalid backend')
 
-    def solve(self, backend: str | None = None, solver_args: dict | None = None) -> 'Solutions':
+    def solve(self, backend: str | None = None, solver_args: dict | None = None) -> Solutions:
         '''
         Solves the system and returns an iterable of solutions.
 
@@ -176,8 +178,8 @@ class Solution:
     '''
     def __init__(
         self,
-        assign_vars: dict['Variable', int],
-        assign_rels: dict['LinearCombination', int],
+        assign_vars: dict[Variable, int],
+        assign_rels: dict[LinearCombination, int],
     ):
         self.assign_vars = assign_vars
         self.assign_rels = assign_rels
@@ -194,7 +196,7 @@ class Solution:
         lines.append(")")
         return "\n".join(lines)
 
-    def __call__(self, obj: 'Variable | LinearCombination') -> int:
+    def __call__(self, obj: Variable | LinearCombination) -> int:
         if isinstance(obj, Variable):
             return self.assign_vars[obj]
 
@@ -222,9 +224,9 @@ class Solutions:
     def __init__(
         self,
         R: list[list[int]],
-        vone: 'Variable | None',
-        vars: list['Variable'],
-        cons: list[tuple['LinearCombination', int]],
+        vone: Variable | None,
+        vars: list[Variable],
+        cons: list[tuple[LinearCombination, int]],
         M: list[list[int]],
     ):
         self.R = [list(row) for row in R]
@@ -322,7 +324,7 @@ class Solutions:
 
         for sol in self.R:
             # assign linear combinations
-            assign_rels: dict['LinearCombination', int] = {}
+            assign_rels: dict[LinearCombination, int] = {}
             for (rel, val) in zip(self.rels, sol):
                 assign_rels[rel] = val
 
@@ -342,13 +344,13 @@ class Solutions:
                 result = [-v for v in result]
                 assign_rels = {rel: -val for rel, val in assign_rels.items()}
 
-            assign_vars: dict['Variable', int] = {}
+            assign_vars: dict[Variable, int] = {}
             for var, val in zip(self.vars, result):
                 assign_vars[var] = val
 
             yield Solution(assign_vars, assign_rels)
 
-    def _get_first(self) -> 'Solution':
+    def _get_first(self) -> Solution:
         '''Returns the first non-degenerate solution, caching it.'''
         if self._first is None:
             try:
@@ -357,7 +359,7 @@ class Solutions:
                 raise ValueError('No non-degenerate solution found')
         return self._first
 
-    def __call__(self, obj: 'Variable | LinearCombination') -> int:
+    def __call__(self, obj: Variable | LinearCombination) -> int:
         '''Convenience: delegates to the first non-degenerate solution.'''
         return self._get_first()(obj)
 
@@ -369,22 +371,22 @@ class LinearCombination:
     '''
     An immutable linear combination of variables.
     '''
-    def __init__(self, ctx: 'LeLeLe', combine: dict['Variable', int]) -> None:
+    def __init__(self, ctx: LeLeLe, combine: dict[Variable, int]) -> None:
         assert isinstance(combine, dict), f"combine must be a dictionary, got {type(combine)}"
         self.ctx = ctx
         self.combine = combine
         self._key = frozenset(combine.items())
 
-    def vars(self) -> set['Variable']:
+    def vars(self) -> set[Variable]:
         return set(self.combine.keys())
 
-    def coeff(self, var: 'Variable') -> int:
+    def coeff(self, var: Variable) -> int:
         return self.combine.get(var, 0)
 
     def __len__(self) -> int:
         return len(self.combine)
 
-    def __iter__(self) -> Iterator[tuple['Variable', int]]:
+    def __iter__(self) -> Iterator[tuple[Variable, int]]:
         return iter(sorted(self.combine.items()))
 
     def __eq__(self, other: object) -> bool:
@@ -401,7 +403,7 @@ class LinearCombination:
         lin = [f'{v!r} * {hex(s)}' if s != 1 else f'{v!r}' for (v, s) in self]
         return ' + '.join(lin)
 
-    def __mod__(self, other) -> 'LinearCombination':
+    def __mod__(self, other) -> LinearCombination:
         try:
             n = int(other)
         except ValueError:
@@ -410,19 +412,19 @@ class LinearCombination:
         combine[self.ctx.var()] = n
         return LinearCombination(ctx=self.ctx, combine=combine)
 
-    def __neg__(self) -> 'LinearCombination':
+    def __neg__(self) -> LinearCombination:
         return LinearCombination(
             ctx=self.ctx,
             combine={s: -v for (s, v) in self.combine.items()}
         )
 
-    def __sub__(self, other) -> 'LinearCombination':
+    def __sub__(self, other) -> LinearCombination:
         return self + (-other)
 
-    def __rsub__(self, other) -> 'LinearCombination':
+    def __rsub__(self, other) -> LinearCombination:
         return _wrap_lin(self.ctx, other) - self
 
-    def __add__(self, other) -> 'LinearCombination':
+    def __add__(self, other) -> LinearCombination:
         if other == 0: return self # this is convenient
 
         # convert to linear combination
@@ -439,10 +441,10 @@ class LinearCombination:
 
         return LinearCombination(ctx=self.ctx, combine=combine)
 
-    def __radd__(self, other) -> 'LinearCombination':
+    def __radd__(self, other) -> LinearCombination:
         return self.__add__(other)
 
-    def __mul__(self, other) -> 'LinearCombination':
+    def __mul__(self, other) -> LinearCombination:
         try:
             n = int(other)
         except ValueError:
@@ -452,10 +454,10 @@ class LinearCombination:
             combine={v: s * n for (v, s) in self.combine.items()}
         )
 
-    def __rmul__(self, other) -> 'LinearCombination':
+    def __rmul__(self, other) -> LinearCombination:
         return self.__mul__(other)
 
-    def short(self, norm: int = 1) -> 'LinearCombination':
+    def short(self, norm: int = 1) -> LinearCombination:
         '''
         Constrain the linear combination to have small norm.
 
@@ -469,7 +471,7 @@ class LinearCombination:
 
 @total_ordering
 class Variable:
-    def __init__(self, ctx: 'LeLeLe', name: str, index: int):
+    def __init__(self, ctx: LeLeLe, name: str, index: int):
         self.ctx = ctx
         self.name = name
         self.index = index
@@ -483,7 +485,7 @@ class Variable:
         '''
         return (self.name, self.index, id(self.ctx))
 
-    def __lt__(self, other: 'Variable') -> bool:
+    def __lt__(self, other: Variable) -> bool:
         if not isinstance(other, Variable):
             return NotImplemented
         return self.key() < other.key()
@@ -523,7 +525,7 @@ class Variable:
     def __hash__(self) -> int:
         return hash(self.key())
 
-    def short(self, norm: int = 1) -> 'Variable':
+    def short(self, norm: int = 1) -> Variable:
         '''
         Constrain the variable to have small norm.
         '''
