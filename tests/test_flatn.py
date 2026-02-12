@@ -1,10 +1,6 @@
 """
 Run the same test scenarios as the other test files,
 but using the flatn backend instead of the default fpylll.
-
-LLL reduction can return rows with either sign (both v and -v are valid
-short vectors), so these tests account for that sign ambiguity by
-iterating through solutions or checking absolute values.
 """
 
 import random
@@ -38,10 +34,8 @@ class TestTinyFlatn(unittest.TestCase):
 
         sol = m.solve(backend=BACKEND_FLATN)
 
-        # LLL may negate short vectors, so check absolute values.
-        # b0 should be 0 regardless of sign, b1 should be +/-1.
         self.assertEqual(sol(b0), v0)
-        self.assertEqual(abs(sol(b1)), v1)
+        self.assertEqual(sol(b1), v1)
         self.assertEqual(sol(v), sol(b0))
 
 
@@ -59,11 +53,8 @@ class TestGaussFlatn(unittest.TestCase):
 
         sol = m.solve(backend=BACKEND_FLATN)
 
-        # accept negated solution (sign ambiguity from LLL)
-        self.assertIn(
-            (sol(x), sol(y)),
-            [(x_true, y_true), (-x_true, -y_true)],
-        )
+        self.assertEqual(sol(x), x_true)
+        self.assertEqual(sol(y), y_true)
 
     def test_three_unknowns(self):
         m = LeLeLe()
@@ -78,11 +69,9 @@ class TestGaussFlatn(unittest.TestCase):
 
         sol = m.solve(backend=BACKEND_FLATN)
 
-        # accept negated solution (sign ambiguity from LLL)
-        self.assertIn(
-            (sol(x), sol(y), sol(z)),
-            [(x_true, y_true, z_true), (-x_true, -y_true, -z_true)],
-        )
+        self.assertEqual(sol(x), x_true)
+        self.assertEqual(sol(y), y_true)
+        self.assertEqual(sol(z), z_true)
 
 
 class TestH1Flatn(unittest.TestCase):
@@ -111,10 +100,10 @@ class TestH1Flatn(unittest.TestCase):
 
         s = m.solve(backend=BACKEND_FLATN)
 
-        # LLL may negate the solution row; check absolute values
         for v in V:
             val = s(v)
-            self.assertLessEqual(abs(val), 255)
+            self.assertGreaterEqual(val, 0)
+            self.assertLessEqual(val, 255)
 
 
 class TestOoooooFlatn(unittest.TestCase):
@@ -160,10 +149,6 @@ class TestOoooooFlatn(unittest.TestCase):
             for sol in solutions:
                 vals = set(sol(bi) for bi in b)
                 if vals <= {0, 1}:
-                    s = [chr(v1) if sol(bi) else chr(v0) for bi in b][::-1]
-                    if ''.join(s) == msg:
-                        return
-                elif vals <= {0, -1}:
                     s = [chr(v1) if sol(bi) else chr(v0) for bi in b][::-1]
                     if ''.join(s) == msg:
                         return

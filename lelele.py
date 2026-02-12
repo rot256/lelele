@@ -354,6 +354,12 @@ class Solutions:
             if self.vone is not None and result[self.vone.index] == 0:
                 continue
 
+            # normalize sign: LLL may return -v instead of v;
+            # if vone is negative, flip the entire solution
+            if self.vone is not None and result[self.vone.index] < 0:
+                result = [-v for v in result]
+                assign_rels = {rel: -val for rel, val in assign_rels.items()}
+
             assign_vars: dict['Variable', int] = {}
             for var, val in zip(self.vars, result):
                 assign_vars[var] = val
