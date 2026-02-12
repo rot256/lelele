@@ -60,7 +60,7 @@ class LeLeLe:
         idx = len(self.vars)
         var = Variable(
             self,
-            name if name else '%s%d' % (prefix, idx),
+            name if name else f'{prefix}{idx}',
             idx
         )
         self.vars.append(var)
@@ -167,7 +167,7 @@ class LeLeLe:
     def __repr__(self) -> str:
         cons = []
         for (lin, norm) in self.constraints:
-            cons.append('    0x%x >= |%s|' % (norm,lin))
+            cons.append(f'    {norm:#x} >= |{lin}|')
         return 'LeLeLe(\n' + '\n'.join(cons) + '\n)'
 
 class Solution:
@@ -393,7 +393,7 @@ class LinearCombination:
         return hash((id(self.ctx), self._key))
 
     def __repr__(self) -> str:
-        lin = ['%r * %s' % (v, hex(s)) if s != 1 else '%r' % v for (v, s) in self]
+        lin = [f'{v!r} * {hex(s)}' if s != 1 else f'{v!r}' for (v, s) in self]
         return ' + '.join(lin)
 
     def __mod__(self, other) -> 'LinearCombination':
@@ -441,7 +441,7 @@ class LinearCombination:
         try:
             n = int(other)
         except ValueError:
-            raise ValueError('Can only mul. linear combination by integer, not %r' % other)
+            raise ValueError(f'Can only mul. linear combination by integer, not {other!r}')
         return LinearCombination(
             ctx=self.ctx,
             combine={v: s * n for (v, s) in self.combine.items()}
