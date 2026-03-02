@@ -24,7 +24,7 @@ import random
 import hashlib
 import unittest
 
-from lelele import LeLeLe
+from kurz import Kurz
 
 # secp256k1 parameters
 P = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
@@ -79,7 +79,7 @@ def _ecdsa_sign(privkey, msg_hash, nonce):
 class TestEcdsaNonceBias(unittest.TestCase):
 
     def _recover_privkey(self, sigs, leaked_bits, pubkey):
-        """Build HNP lattice and recover private key using LeLeLe.
+        """Build HNP lattice and recover private key using Kurz.
 
         Args:
             sigs: list of (r, s, msg_hash, leaked_nonce_lsbs) tuples
@@ -89,7 +89,7 @@ class TestEcdsaNonceBias(unittest.TestCase):
         Returns:
             Recovered private key, or None on failure.
         """
-        le = LeLeLe()
+        le = Kurz()
         d = le.var(name='privkey')
 
         B = 1 << leaked_bits

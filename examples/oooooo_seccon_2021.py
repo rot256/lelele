@@ -6,7 +6,7 @@ import random
 
 from Crypto.Util.number import bytes_to_long, getPrime
 
-from lelele import LeLeLe
+from kurz import Kurz
 
 random.seed(42)
 
@@ -19,7 +19,7 @@ S = bytes_to_long(message) % M
 
 LEN = 128
 
-le = LeLeLe()
+le = Kurz()
 
 v1 = ord('o')
 v0 = ord('O')

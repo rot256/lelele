@@ -1,6 +1,6 @@
 import random
 import unittest
-import lelele as le
+import kurz as le
 
 
 class TestTiny(unittest.TestCase):
@@ -9,7 +9,7 @@ class TestTiny(unittest.TestCase):
         v0 = 0
         v1 = 1
 
-        m = le.LeLeLe()
+        m = le.Kurz()
 
         v = m.var()
         b0 = m.bit()

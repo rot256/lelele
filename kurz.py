@@ -2,14 +2,14 @@ from __future__ import annotations
 
 BACKEND_FLATN: str = 'flatn'
 BACKEND_FPYLLL: str = 'fpylll'
-BACKEND_DEFAULT: str = BACKEND_FPYLLL
+BACKEND_DEFAULT: str = BACKEND_FLATN
 
 from math import gcd
 from typing import Iterator, Generator
 from functools import reduce, total_ordering
 
-def _wrap_lin(ctx: LeLeLe, val: LinearCombination | Variable | int) -> LinearCombination:
-    assert isinstance(ctx, LeLeLe)
+def _wrap_lin(ctx: Kurz, val: LinearCombination | Variable | int) -> LinearCombination:
+    assert isinstance(ctx, Kurz)
 
     # linear combination
     if isinstance(val, LinearCombination):
@@ -34,7 +34,7 @@ def _reduce_row_gcd(row: list[int]) -> None:
         for i in range(len(row)):
             row[i] //= g
 
-class LeLeLe:
+class Kurz:
     def __init__(self):
         self.vars: list[Variable] = []
         self.vone: Variable | None = None
@@ -94,7 +94,7 @@ class LeLeLe:
 
         return M
 
-    def solve_raw(self, backend: str | None = None, solver_args: dict | None = None) -> list[list[int]]:
+    def solve_raw(self, backend: str | None = None, **kwargs) -> list[list[int]]:
         '''
         Solves the system and returns the raw reduced matrix.
 
@@ -104,7 +104,7 @@ class LeLeLe:
             backend (str, optional):
                 The backend to use for matrix reduction. Can be 'fpylll', 'flatn' or None.
                 If None, will use flatn if available, otherwise fpylll.
-            solver_args (dict, optional): Additional arguments to pass to the chosen solver backend.
+            **kwargs: Additional arguments forwarded to the chosen solver backend.
 
         Returns:
             list[list[int]]: The reduced matrix
@@ -117,25 +117,23 @@ class LeLeLe:
         # generate the matrix
         M = self.system()
 
-        # Default empty args if none provided
-        if solver_args is None:
-            solver_args = {}
-
         # reduce the matrix with the chosen backend
         if backend == BACKEND_FPYLLL:
             from fpylll import IntegerMatrix, LLL
             R = IntegerMatrix.from_matrix(M)
-            LLL.reduction(R, **solver_args)
+            LLL.reduction(R, **kwargs)
             return [list(row) for row in R]
         elif backend == BACKEND_FLATN:
             import flatn
-            return flatn.reduce(M, **solver_args)
+            if not any(k in kwargs for k in ('delta', 'rhf', 'alpha')):
+                kwargs['delta'] = 0.99
+            return flatn.reduce(M, **kwargs)
         elif backend is None:
-            return self.solve_raw(backend=BACKEND_DEFAULT, solver_args=solver_args)
+            return self.solve_raw(backend=BACKEND_DEFAULT, **kwargs)
         else:
             raise ValueError('Invalid backend')
 
-    def solve(self, backend: str | None = None, solver_args: dict | None = None) -> Solutions:
+    def solve(self, backend: str | None = None, **kwargs) -> Solutions:
         '''
         Solves the system and returns an iterable of solutions.
 
@@ -145,7 +143,7 @@ class LeLeLe:
         Args:
             backend (str, optional): The backend solver to use ('fpylll' or 'flatn').
                 Defaults to 'flatn' if available, otherwise 'fpylll'.
-            solver_args (dict, optional): Additional arguments to pass to the solver backend.
+            **kwargs: Additional arguments forwarded to the chosen solver backend.
 
         Returns:
             Solutions: An iterable of Solution snapshots. Supports direct calls
@@ -158,7 +156,7 @@ class LeLeLe:
         return Solutions(
             self.solve_raw(
                 backend=backend,
-                solver_args=solver_args
+                **kwargs
             ),
             self.vone,
             self.vars,
@@ -170,7 +168,7 @@ class LeLeLe:
         cons = []
         for (lin, norm) in self.constraints:
             cons.append(f'    {norm:#x} >= |{lin}|')
-        return 'LeLeLe(\n' + '\n'.join(cons) + '\n)'
+        return 'Kurz(\n' + '\n'.join(cons) + '\n)'
 
 class Solution:
     '''
@@ -371,7 +369,7 @@ class LinearCombination:
     '''
     An immutable linear combination of variables.
     '''
-    def __init__(self, ctx: LeLeLe, combine: dict[Variable, int]) -> None:
+    def __init__(self, ctx: Kurz, combine: dict[Variable, int]) -> None:
         assert isinstance(combine, dict), f"combine must be a dictionary, got {type(combine)}"
         self.ctx = ctx
         self.combine = combine
@@ -471,7 +469,7 @@ class LinearCombination:
 
 @total_ordering
 class Variable:
-    def __init__(self, ctx: LeLeLe, name: str, index: int):
+    def __init__(self, ctx: Kurz, name: str, index: int):
         self.ctx = ctx
         self.name = name
         self.index = index
