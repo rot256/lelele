@@ -82,7 +82,7 @@ please copy-paste whenever you need it (essentially vendoring it).
 To automatically solve systems, `Kurz` needs a lattice reduction backend.
 Two backends are supported:
 
-- [`flatn`](https://github.com/rot256/flatn) (default)
+- [`flatn`](https://pypi.org/project/flatn/) (default)
 - [`fpylll`](https://github.com/fplll/fpylll)
 
 Install one of them (e.g. `pip install flatn`).
