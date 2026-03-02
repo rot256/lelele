@@ -1,6 +1,6 @@
 # Kurz
 
-`Kurz` is a very simple library (~500 lines) to help you more easily implement lattice attacks, the library is inspired by `Z3Py` (python interface for Z3).
+`Kurz` ("short" in German) is a very simple library (~500 lines) to help you more easily implement lattice attacks, the library is inspired by `Z3Py` (python interface for Z3).
 Manually constructing lattices for LLL attacks is usually a messy process of debugging list comprehensions,
 `Kurz` solves this by allowing you to simply require that a linear combination of variables is `.short()` and then `.solve()` for concrete values,
 the solution is returned as an object and can be queried using `sol(var)`.
