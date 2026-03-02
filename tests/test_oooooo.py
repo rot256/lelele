@@ -7,7 +7,7 @@ import unittest
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long, getPrime
 
-from lelele import LeLeLe
+from kurz import Kurz
 
 
 class TestOooooo(unittest.TestCase):
@@ -25,7 +25,7 @@ class TestOooooo(unittest.TestCase):
 
             LEN = 128
 
-            le = LeLeLe()
+            le = Kurz()
 
             v1 = ord('o')
             v0 = ord('O')
@@ -42,14 +42,17 @@ class TestOooooo(unittest.TestCase):
             (d % M).short()
 
             try:
-                sol = le.solve()
-            except ValueError:
+                solutions = le.solve()
+            except (ValueError, RuntimeError):
                 continue
 
-            s = [chr(v1) if sol(bi) else chr(v0) for bi in b][::-1]
-            s = ''.join(s)
-            if s == message.decode('utf-8'):
-                return
+            msg = message.decode('utf-8')
+            for sol in solutions:
+                vals = set(sol(bi) for bi in b)
+                if vals <= {0, 1}:
+                    s = [chr(v1) if sol(bi) else chr(v0) for bi in b][::-1]
+                    if ''.join(s) == msg:
+                        return
 
             self.assertGreater(fails, 0, 'too many failed attempts')
             fails -= 1

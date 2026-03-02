@@ -1,24 +1,25 @@
 """
 Run the same test scenarios as the other test files,
-but using the flatn backend instead of the default fpylll.
+but using the fpylll backend instead of the default flatn.
 """
 
 import random
+import hashlib
 import unittest
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long, getPrime
 
-import lelele as le
-from lelele import LeLeLe, BACKEND_FLATN
+import kurz as le
+from kurz import Kurz, BACKEND_FPYLLL
 
 
-class TestTinyFlatn(unittest.TestCase):
+class TestTinyFpylll(unittest.TestCase):
 
     def test_tiny(self):
         v0 = 0
         v1 = 1
 
-        m = LeLeLe()
+        m = Kurz()
 
         v = m.var()
         b0 = m.bit()
@@ -32,17 +33,17 @@ class TestTinyFlatn(unittest.TestCase):
 
         (1000 * v - 1000 * b0).short(1)
 
-        sol = m.solve(backend=BACKEND_FLATN)
+        sol = m.solve(backend=BACKEND_FPYLLL)
 
         self.assertEqual(sol(b0), v0)
         self.assertEqual(sol(b1), v1)
         self.assertEqual(sol(v), sol(b0))
 
 
-class TestGaussFlatn(unittest.TestCase):
+class TestGaussFpylll(unittest.TestCase):
 
     def test_two_unknowns(self):
-        m = LeLeLe()
+        m = Kurz()
         x = m.var()
         y = m.var()
         x_true, y_true = 42, 17
@@ -51,13 +52,13 @@ class TestGaussFlatn(unittest.TestCase):
             rhs = a * x_true + b * y_true
             (a * x + b * y - rhs).short(norm=1)
 
-        sol = m.solve(backend=BACKEND_FLATN)
+        sol = m.solve(backend=BACKEND_FPYLLL)
 
         self.assertEqual(sol(x), x_true)
         self.assertEqual(sol(y), y_true)
 
     def test_three_unknowns(self):
-        m = LeLeLe()
+        m = Kurz()
         x = m.var()
         y = m.var()
         z = m.var()
@@ -67,14 +68,14 @@ class TestGaussFlatn(unittest.TestCase):
             rhs = a * x_true + b * y_true + c * z_true
             (a * x + b * y + c * z - rhs).short(norm=1)
 
-        sol = m.solve(backend=BACKEND_FLATN)
+        sol = m.solve(backend=BACKEND_FPYLLL)
 
         self.assertEqual(sol(x), x_true)
         self.assertEqual(sol(y), y_true)
         self.assertEqual(sol(z), z_true)
 
 
-class TestH1Flatn(unittest.TestCase):
+class TestH1Fpylll(unittest.TestCase):
 
     def test_h1_google_2021(self):
         n = 8948962207650232551656602815159153422162609644098354511344597187200057010413418528378981730643524959857451398370029280583094215613882043973354392115544169
@@ -89,7 +90,7 @@ class TestH1Flatn(unittest.TestCase):
 
         ti = [4294967296, 18446744073709551616, 79228162514264337593543950336, 340282366920938463463374607431768211456, 1461501637330902918203684832716283019655932542976, 6277101735386680763835789423207666416102355444464034512896, 26959946667150639794667015087019630673637144422540572481103610249216, 115792089237316195423570985008687907853269984665640564039457584007913129639936, 497323236409786642155382248146820840100456150797347717440463976893159497012533375533056, 2135987035920910082395021706169552114602704522356652769947041607822219725780640550022962086936576, 9173994463960286046443283581208347763186259956673124494950355357547691504353939232280074212440502746218496, 39402006196394479212279040100143613805079739270465446667948293404245721771497210611414266254884915640806627990306816, 169230328010303641331690318856389386196071598838855992136870091590247882556495704531248437872567112920983350278405979725889536, 726838724295606890549323807888004534353641360687318060281490199180639288113397923326191050713763565560762521606266177933534601628614656, 3121748550315992231381597229793166305748598142664971150859156959625371738819765620120306103063491971159826931121406622895447975679288285306290176, 5159249867668349911243806627181242575833458202543206475047697474526358261869186924011382790189208655648910161810615828513665526818684388075299493416861603, 1615056927036222818536540436109511519897880109009208407005747059412815424582253519683500743111683921432735379004679626245981298691864745311539294454869738, 165033952520132305845221975095335876275310054958068643604221901334921373713378731448193168912109735395014614900730614330295001823627033790824622720574798, 8538993764909927512725465125072948411611389093098376500017490333638579940195855321816766152050399699417663249783916519027558890177789891145279765673646186, 7437844578275358797920905804207733541334697030084163577642854216151366443130584275911579241324264849909853017288917439589749179986446785278284519597153548, 671961560180748200175764921083712656678424119063417676317140427682003478526673548807501634025370008436823855766736660119782480731755259340313925289100308, 4090498791478852095796373200800494142856281205280292783724202877291646007887551223487729744254706027507400213499428971261412228401440093576471682819293047, 1309129359049556234897378024648248702416927627124507615866715695323143581577221641746061500406639027631560634996165695404506230854702778948093571179423237, 7872694592936430487407260201144407041197521404075260551797350619721896669850754337069964658720737745810244292385162908059379521538887504875334828092395573, 4227537719683061951200547278578466784178344867945907007156646279435530638234534167791463591546519431255322194844837519233856146008122260876804939528407469, 6295805285142874717046908583316057841361155719229253575489532306657145726724216717016350010309628218130567815868098313194386117116767265341631593139695818, 6789891312924109772207020745457489661673756461148293944786807980125263681920809006865701942100237692522027476906559843914728343837358455258810492286648726, 68014054937275377984618706023347270571161826637680939845006761384208345950039868325812735313880442026491007547740460351261192519926976103078575735154674, 5100638363729968122847966899845984045067415870781405759299587418132822364387310366297232822090588331870734853397859494587628588710081739832263074650376077, 3859739349047082709153133922872005952332653211271251798099273208830273538376012742302101850398304078087861545008913026711753858017524849463175791327909591, 1142479709472781717609648600178318148593919213242417191766100639042258601494469986554560718079956978800535690595313107166646008506058297217318781007756673]
 
-        m = LeLeLe()
+        m = Kurz()
 
         V = [m.byte() for _ in range(len(ti))]
 
@@ -98,7 +99,7 @@ class TestH1Flatn(unittest.TestCase):
         w %= n
         w.short()
 
-        s = m.solve(backend=BACKEND_FLATN)
+        s = m.solve(backend=BACKEND_FPYLLL)
 
         for v in V:
             val = s(v)
@@ -106,7 +107,7 @@ class TestH1Flatn(unittest.TestCase):
             self.assertLessEqual(val, 255)
 
 
-class TestOoooooFlatn(unittest.TestCase):
+class TestOoooooFpylll(unittest.TestCase):
 
     def test_oooooo_seccon_2021(self):
         fails = 10
@@ -121,7 +122,7 @@ class TestOoooooFlatn(unittest.TestCase):
 
             LEN = 128
 
-            m = LeLeLe()
+            m = Kurz()
 
             v1 = ord('o')
             v0 = ord('O')
@@ -138,25 +139,122 @@ class TestOoooooFlatn(unittest.TestCase):
             (d % M).short()
 
             try:
-                solutions = m.solve(backend=BACKEND_FLATN)
-            except (ValueError, RuntimeError):
-                # RuntimeError: flatter may crash on certain lattices
+                sol = m.solve(backend=BACKEND_FPYLLL)
+            except ValueError:
                 continue
 
-            # flatn may place the correct solution deeper in the reduced
-            # matrix than fpylll does, so iterate through all rows.
-            msg = message.decode('utf-8')
-            for sol in solutions:
-                vals = set(sol(bi) for bi in b)
-                if vals <= {0, 1}:
-                    s = [chr(v1) if sol(bi) else chr(v0) for bi in b][::-1]
-                    if ''.join(s) == msg:
-                        return
+            s = [chr(v1) if sol(bi) else chr(v0) for bi in b][::-1]
+            s = ''.join(s)
+            if s == message.decode('utf-8'):
+                return
 
             self.assertGreater(fails, 0, 'too many failed attempts')
             fails -= 1
 
         self.fail('test failed: no successful solve in 128 iterations')
+
+
+# secp256k1 parameters
+_P = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+_N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+_GX = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
+_GY = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8
+
+
+def _modinv(a, m):
+    return pow(a, -1, m)
+
+
+def _ec_add(p1, p2):
+    if p1 is None:
+        return p2
+    if p2 is None:
+        return p1
+    x1, y1 = p1
+    x2, y2 = p2
+    if x1 == x2 and y1 == y2:
+        lam = (3 * x1 * x1) * _modinv(2 * y1, _P) % _P
+    elif x1 == x2:
+        return None
+    else:
+        lam = (y2 - y1) * _modinv(x2 - x1, _P) % _P
+    x3 = (lam * lam - x1 - x2) % _P
+    y3 = (lam * (x1 - x3) - y1) % _P
+    return (x3, y3)
+
+
+def _ec_mul(k, point):
+    result = None
+    addend = point
+    while k:
+        if k & 1:
+            result = _ec_add(result, addend)
+        addend = _ec_add(addend, addend)
+        k >>= 1
+    return result
+
+
+_G = (_GX, _GY)
+
+
+def _ecdsa_sign(privkey, msg_hash, nonce):
+    R = _ec_mul(nonce, _G)
+    r = R[0] % _N
+    s = _modinv(nonce, _N) * (msg_hash + r * privkey) % _N
+    return r, s
+
+
+class TestEcdsaNonceBiasFpylll(unittest.TestCase):
+
+    def _recover_privkey(self, sigs, leaked_bits, pubkey):
+        le = Kurz()
+        d = le.var(name='privkey')
+
+        B = 1 << leaked_bits
+        Binv = _modinv(B, _N)
+
+        for r_i, s_i, h_i, kp_i in sigs:
+            sinv = _modinv(s_i, _N)
+            a_i = Binv * r_i * sinv % _N
+            b_i = Binv * (sinv * h_i - kp_i) % _N
+            ((a_i * d + b_i) % _N).short(_N >> leaked_bits)
+
+        d.short(_N)
+
+        for sol in le.solve(backend=BACKEND_FPYLLL):
+            candidate = sol(d) % _N
+            if candidate > 0 and _ec_mul(candidate, _G) == pubkey:
+                return candidate
+        return None
+
+    def _gen_sigs(self, privkey, num_sigs, leaked_bits):
+        B = 1 << leaked_bits
+        sigs = []
+        for _ in range(num_sigs):
+            msg = random.randbytes(32)
+            h = int(hashlib.sha256(msg).hexdigest(), 16)
+            k = random.randrange(1, _N)
+            r, s = _ecdsa_sign(privkey, h, k)
+            sigs.append((r, s, h, k % B))
+        return sigs
+
+    def test_ecdsa_nonce_bias_8bit(self):
+        """Recover secp256k1 private key from 50 sigs with 8-bit nonce leak."""
+        random.seed(1337)
+        privkey = random.randrange(1, _N)
+        pubkey = _ec_mul(privkey, _G)
+        sigs = self._gen_sigs(privkey, num_sigs=50, leaked_bits=8)
+        recovered = self._recover_privkey(sigs, leaked_bits=8, pubkey=pubkey)
+        self.assertEqual(recovered, privkey)
+
+    def test_ecdsa_nonce_bias_7bit(self):
+        """Recover secp256k1 private key from 60 sigs with 7-bit nonce leak."""
+        random.seed(42)
+        privkey = random.randrange(1, _N)
+        pubkey = _ec_mul(privkey, _G)
+        sigs = self._gen_sigs(privkey, num_sigs=60, leaked_bits=7)
+        recovered = self._recover_privkey(sigs, leaked_bits=7, pubkey=pubkey)
+        self.assertEqual(recovered, privkey)
 
 
 if __name__ == '__main__':
