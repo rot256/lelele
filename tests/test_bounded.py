@@ -99,5 +99,27 @@ class TestBounded(unittest.TestCase):
         self.assertTrue(found, "no non-trivial short solution found")
 
 
+    def test_unbounded_var(self):
+        """Solve with .var() when matrix has more rows than columns."""
+        m = kurz.Kurz()
+        a = m.var()
+        b = m.var()
+        c = m.var()
+
+        # one equation, three unknowns
+        (2 * a + 3 * b + 5 * c).short()
+
+        found = False
+        for sol in m.solve():
+            va, vb, vc = sol(a), sol(b), sol(c)
+            if va == 0 and vb == 0 and vc == 0:
+                continue
+            self.assertEqual(2 * va + 3 * vb + 5 * vc, 0)
+            found = True
+            break
+
+        self.assertTrue(found, "no non-trivial solution found")
+
+
 if __name__ == '__main__':
     unittest.main()
