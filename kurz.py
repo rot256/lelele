@@ -79,8 +79,7 @@ class Kurz:
         This does not require fpylll.
         '''
 
-        # calculate the largest norm
-        max_norm = max([norm for _, norm in self.constraints], default=1)
+        max_norm = max((norm for _, norm in self.constraints), default=1)
 
         rows = len(self.vars)
         cols = len(self.constraints)
@@ -93,6 +92,42 @@ class Kurz:
                 M[var.index][i] = scl * rescale
 
         return M
+
+    def _padded_system(self) -> tuple[list[list[int]], list[tuple[LinearCombination, int]]]:
+        '''
+        Returns (matrix, constraints) where matrix is the LLL system
+        with extra identity columns for unbounded variables
+        when the matrix would otherwise have more rows than columns.
+
+        The returned constraints list includes synthetic identity
+        constraints for each padded variable.
+        '''
+        M = self.system()
+        rows = len(M)
+        cols = len(M[0]) if M else 0
+        padded_cons = list(self.constraints)
+
+        if cols >= rows:
+            return M, padded_cons
+
+        # pad with identity columns for unbounded variables
+        # to make the matrix at least square
+        bounded = set()
+        for lin, _ in self.constraints:
+            if len(lin) == 1:
+                bounded.update(lin.vars())
+
+        for var in self.vars:
+            if cols >= rows:
+                break
+            if var not in bounded:
+                for row in M:
+                    row.append(0)
+                M[var.index][-1] = 1
+                padded_cons.append((var.lin(), 1))
+                cols += 1
+
+        return M, padded_cons
 
     def solve_raw(self, backend: str | None = None, **kwargs) -> list[list[int]]:
         '''
@@ -114,24 +149,26 @@ class Kurz:
             ValueError: If an invalid backend is specified
         '''
 
-        # generate the matrix
-        M = self.system()
+        # generate the padded matrix
+        M, _padded_cons = self._padded_system()
 
         # reduce the matrix with the chosen backend
         if backend == BACKEND_FPYLLL:
             from fpylll import IntegerMatrix, LLL
             R = IntegerMatrix.from_matrix(M)
             LLL.reduction(R, **kwargs)
-            return [list(row) for row in R]
+            R = [list(row) for row in R]
         elif backend == BACKEND_FLATN:
             import flatn
             if not any(k in kwargs for k in ('delta', 'rhf', 'alpha')):
                 kwargs['delta'] = 0.99
-            return flatn.reduce(M, **kwargs)
+            R = flatn.reduce(M, **kwargs)
         elif backend is None:
             return self.solve_raw(backend=BACKEND_DEFAULT, **kwargs)
         else:
             raise ValueError('Invalid backend')
+
+        return R
 
     def solve(self, backend: str | None = None, **kwargs) -> Solutions:
         '''
@@ -153,6 +190,7 @@ class Kurz:
             ImportError: If neither fpylll nor flatn solver backend is installed.
             ValueError: If an invalid backend is specified.
         '''
+        M_padded, padded_cons = self._padded_system()
         return Solutions(
             self.solve_raw(
                 backend=backend,
@@ -160,8 +198,8 @@ class Kurz:
             ),
             self.vone,
             self.vars,
-            self.constraints,
-            self.system(),
+            padded_cons,
+            M_padded,
         )
 
     def __repr__(self) -> str:
