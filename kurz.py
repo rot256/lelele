@@ -129,6 +129,22 @@ class Kurz:
 
         return M, padded_cons
 
+    @staticmethod
+    def _reduce(M: list[list[int]], backend: str, **kwargs) -> list[list[int]]:
+        '''Reduce matrix M with the given backend.'''
+        if backend == BACKEND_FPYLLL:
+            from fpylll import IntegerMatrix, LLL
+            R = IntegerMatrix.from_matrix(M)
+            LLL.reduction(R, **kwargs)
+            return [list(row) for row in R]
+        elif backend == BACKEND_FLATN:
+            import flatn
+            if not any(k in kwargs for k in ('delta', 'rhf', 'alpha')):
+                kwargs['delta'] = 0.99
+            return flatn.reduce(M, **kwargs)
+        else:
+            raise ValueError('Invalid backend')
+
     def solve_raw(self, backend: str | None = None, **kwargs) -> list[list[int]]:
         '''
         Solves the system and returns the raw reduced matrix.
@@ -148,27 +164,8 @@ class Kurz:
             ImportError: If neither fpylll nor flatn is installed
             ValueError: If an invalid backend is specified
         '''
-
-        # generate the padded matrix
         M, _padded_cons = self._padded_system()
-
-        # reduce the matrix with the chosen backend
-        if backend == BACKEND_FPYLLL:
-            from fpylll import IntegerMatrix, LLL
-            R = IntegerMatrix.from_matrix(M)
-            LLL.reduction(R, **kwargs)
-            R = [list(row) for row in R]
-        elif backend == BACKEND_FLATN:
-            import flatn
-            if not any(k in kwargs for k in ('delta', 'rhf', 'alpha')):
-                kwargs['delta'] = 0.99
-            R = flatn.reduce(M, **kwargs)
-        elif backend is None:
-            return self.solve_raw(backend=BACKEND_DEFAULT, **kwargs)
-        else:
-            raise ValueError('Invalid backend')
-
-        return R
+        return self._reduce(M, backend or BACKEND_DEFAULT, **kwargs)
 
     def solve(self, backend: str | None = None, **kwargs) -> Solutions:
         '''
@@ -190,17 +187,9 @@ class Kurz:
             ImportError: If neither fpylll nor flatn solver backend is installed.
             ValueError: If an invalid backend is specified.
         '''
-        M_padded, padded_cons = self._padded_system()
-        return Solutions(
-            self.solve_raw(
-                backend=backend,
-                **kwargs
-            ),
-            self.vone,
-            self.vars,
-            padded_cons,
-            M_padded,
-        )
+        M, padded_cons = self._padded_system()
+        R = self._reduce(M, backend or BACKEND_DEFAULT, **kwargs)
+        return Solutions(R, self.vone, self.vars, padded_cons, M)
 
     def __repr__(self) -> str:
         cons = []
